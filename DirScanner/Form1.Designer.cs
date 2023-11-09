@@ -33,6 +33,7 @@
             textBoxFolder = new TextBox();
             pictureBox1 = new PictureBox();
             LabelResult = new Label();
+            listView1 = new ListView();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             SuspendLayout();
             // 
@@ -79,16 +80,29 @@
             // 
             LabelResult.AutoSize = true;
             LabelResult.Font = new Font("Segoe UI", 20F, FontStyle.Bold, GraphicsUnit.Point);
-            LabelResult.Location = new Point(21, 64);
+            LabelResult.Location = new Point(14, 385);
             LabelResult.Name = "LabelResult";
             LabelResult.Size = new Size(0, 46);
             LabelResult.TabIndex = 4;
+            // 
+            // listView1
+            // 
+            listView1.Location = new Point(13, 58);
+            listView1.Margin = new Padding(4);
+            listView1.Name = "listView1";
+            listView1.Size = new Size(773, 323);
+            listView1.TabIndex = 5;
+            listView1.UseCompatibleStateImageBehavior = false;
+            listView1.View = View.List;
+            listView1.ColumnClick += listView1_ColumnClick;
+            listView1.MouseDoubleClick += listView1_MouseDoubleClick;
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(9F, 20F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
+            Controls.Add(listView1);
             Controls.Add(LabelResult);
             Controls.Add(pictureBox1);
             Controls.Add(textBoxFolder);
@@ -109,5 +123,6 @@
         private TextBox textBoxFolder;
         private PictureBox pictureBox1;
         private Label LabelResult;
+        private ListView listView1;
     }
 }
