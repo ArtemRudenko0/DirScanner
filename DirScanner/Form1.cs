@@ -1,8 +1,10 @@
 using System;
 using System.Collections;
+using System.Diagnostics;
 using System.IO;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
@@ -67,7 +69,8 @@ namespace DirScanner
                 {
                     DirectoryInfo subDir = new DirectoryInfo(subdirectory);
                     ListViewItem item = new ListViewItem(subDir.Name, 0);
-                    long folderSize = CalculateTotalSize(subDir.FullName);
+                    //long folderSize = CalculateTotalSize(subdirectory);
+                    long folderSize = folderSizes[subDir.FullName];
                     item.SubItems.Add(setMeasurement(folderSize));
 
                     listView1.Items.Add(item);
@@ -114,9 +117,6 @@ namespace DirScanner
                 LabelResult.Text = " ";
                 progressBarForm = new ProgressBarForm(foldersCount);
 
-                // Привязываем обработчик события FormClosed
-                // progressBarForm.Left = listView1.Left + this.Left + 13 - 4;
-                //progressBarForm.Top = listView1.Top + this.Top + 58 - 20;
                 progressBarForm.Width = listView1.Width;
                 progressBarForm.Height = listView1.Height;
                 progressBarForm.CenterChildForm(progressBarForm, this, listView1.Location.X, listView1.Location.Y);
@@ -126,50 +126,68 @@ namespace DirScanner
                 buttonChoose.Enabled = false;
                 textBoxFolder.Enabled = false;
                 Application.DoEvents(); // Обновление интерфейса
-                foldersCount = CountTotalFolders(DirectoryPath);
-                progressBarForm.TotalFolders = foldersCount;
+               
+                await Task.Run(() =>
+                {
+                    foldersCount = CountTotalFolders(DirectoryPath);
+                    progressBarForm.TotalFolders = foldersCount;
+                    long totalSize = CalculateTotalSize(DirectoryPath);
 
-                // Запускаем асинхронную операцию в отдельном потоке
-                 await Task.Run(() =>
-                 {
-                     long totalSize = CalculateTotalSize(DirectoryPath);
+                    // Обновляем интерфейс в основном потоке
+                    Invoke(new Action(() =>
+                    {
+                        LoadFiles(SubDir, OccurrenceCounter);
+                        LabelResult.Text = "Загальний розмір файлів: " + setMeasurement(totalSize) + " в "
+                            + foldersCount.ToString() + " папках";
 
-                     // Обновляем интерфейс в основном потоке
-                     Invoke(new Action(() =>
-                     {
-                         LoadFiles(SubDir, OccurrenceCounter);
-                         LabelResult.Text = "Загальний розмір файлів: " + setMeasurement(totalSize) + " в "
-                             + foldersCount.ToString() + " папках";
+                        textBoxFolder.Select(0, 0);
+                        
 
-                         // Закрываем форму прогресса после завершения сканирования
-                         //this.Enabled = true;
+                        progressBarForm.Close();
 
-
-                         //textBoxFolder.Focus();
-                         textBoxFolder.Select(0, 0);
-
-                         progressBarForm.Close();
-
-                     }));
-                 });
-               // await ScanAndUpdateUIAsync(SubDir);
+                    }));
+                });
+                if (this.isNotActive())
+                {
+                    ShowNotification("Сканування завершено", "Сканування вашої папки завершено. Перейдіть до програми, щоб побачити результат.");
+                }
                 buttonChoose.Enabled = true;
                 textBoxFolder.Enabled = true;
             }
 
         }
 
-        /*private async Task ScanAndUpdateUIAsync(DirectoryInfo SubDir)
+        private bool isNotActive()
         {
-            long totalSize = await Task.Run(() => CalculateTotalSize(DirectoryPath));
+            [DllImport("user32.dll")]
+            static extern IntPtr GetForegroundWindow();
+            IntPtr foregroundWindowHandle = GetForegroundWindow();
+            IntPtr myWindowHandle = Process.GetCurrentProcess().MainWindowHandle;
 
-            LoadFiles(SubDir, OccurrenceCounter);
-            LabelResult.Text = "Загальний розмір файлів: " + setMeasurement(totalSize) + " в " + foldersCount.ToString() + " папках";
+            if (foregroundWindowHandle == myWindowHandle)
+            {
+                return false;
+            }
+            else
+            {
+                return true;
+            }
+        }
+        private void ShowNotification(string title, string message)
+        {
+            NotifyIcon notifyIcon = new NotifyIcon();
+            notifyIcon.Visible = true;
 
-            textBoxFolder.Select(0, 0);
+            notifyIcon.Icon = SystemIcons.Information;
+            notifyIcon.BalloonTipTitle = title;
+            notifyIcon.BalloonTipText = message;
+            notifyIcon.ShowBalloonTip(3000); // Показать всплывающее уведомление на 2 секунды
 
-            progressBarForm.Close();
-        }*/
+            // Задержка для отображения всплывающего уведомления
+            System.Threading.Thread.Sleep(3000);
+
+            notifyIcon.Dispose(); // Освобождение ресурсов
+        }
 
         private long CalculateTotalSize(string folderPath)
         {
@@ -222,24 +240,21 @@ namespace DirScanner
         }
         private void CountFoldersRecursively(string folderPath, ref int folderCount)
         {
-            try
+            if (CanAccessFolder(folderPath))
             {
-                // Попытка получить доступ к папке
-                DirectoryInfo directoryInfo = new DirectoryInfo(folderPath);
-                if (CanAccessFolder(directoryInfo.FullName))
-                {
-                    folderCount++;
-                }
+                folderCount++;
 
-                // Рекурсивный вызов для подпапок
-                foreach (string subfolder in Directory.GetDirectories(folderPath))
+                try
                 {
-                    CountFoldersRecursively(subfolder, ref folderCount);
+                    foreach (string subfolder in Directory.GetDirectories(folderPath))
+                    {
+                        CountFoldersRecursively(subfolder, ref folderCount);
+                    }
                 }
-            }
-            catch (UnauthorizedAccessException)
-            {
-                // Игнорировать ошибку доступа
+                catch (UnauthorizedAccessException)
+                {
+                    // Обработка ошибки доступа к папке
+                }
             }
         }
 
@@ -298,17 +313,21 @@ namespace DirScanner
         }
         private bool CanAccessFile(string filePath)
         {
-            try
+            if (File.Exists(filePath))
             {
-                FileInfo fileInfo = new FileInfo(filePath);
-                fileInfo.Refresh(); // Обновляем информацию о файле
-                return true;
+                try
+                {
+                    FileInfo fileInfo = new FileInfo(filePath);
+                    fileInfo.Refresh(); // Обновляем информацию о файле
+                    return true;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    // Обработка ошибки доступа к файлу
+                    return false;
+                }
             }
-            catch (UnauthorizedAccessException)
-            {
-                // Обработка ошибки доступа к файлу
-                return false;
-            }
+            else return false;
         }
         private void buttonChoose_Click(object sender, EventArgs e)
         {

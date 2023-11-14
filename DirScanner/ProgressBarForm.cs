@@ -30,12 +30,8 @@ namespace DirScanner
         {
             childForm.StartPosition = FormStartPosition.Manual;
 
-            // Центрируем childForm относительно parentForm
-            //childForm.Left = LVwidth + parentForm.Left + 13 - 4;
-            // childForm.Top = LVheight + parentForm.Top + 58 - 20;
             childForm.Location = new Point(
-                 // parentForm.Location.X + (parentForm.Width - childForm.Width) - LVwidth,
-                 //parentForm.Location.Y + (parentForm.Height - childForm.Height) - LVheight
+                
                  parentForm.Location.X + ListViewX + 13 - 4,
                 parentForm.Location.Y + ListViewY + 58 - 20
             );
