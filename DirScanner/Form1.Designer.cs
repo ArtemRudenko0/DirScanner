@@ -28,17 +28,21 @@
         /// </summary>
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             buttonChoose = new Button();
             buttonScan = new Button();
             textBoxFolder = new TextBox();
             pictureBox1 = new PictureBox();
             LabelResult = new Label();
             listView1 = new ListView();
+            column = new ColumnHeader();
+            column1 = new ColumnHeader();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             SuspendLayout();
             // 
             // buttonChoose
             // 
+            buttonChoose.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             buttonChoose.Location = new Point(454, 12);
             buttonChoose.Name = "buttonChoose";
             buttonChoose.Size = new Size(148, 39);
@@ -49,6 +53,7 @@
             // 
             // buttonScan
             // 
+            buttonScan.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             buttonScan.Location = new Point(608, 12);
             buttonScan.Name = "buttonScan";
             buttonScan.Size = new Size(180, 39);
@@ -59,6 +64,7 @@
             // 
             // textBoxFolder
             // 
+            textBoxFolder.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             textBoxFolder.Font = new Font("Segoe UI", 14F, FontStyle.Regular, GraphicsUnit.Point);
             textBoxFolder.Location = new Point(56, 12);
             textBoxFolder.Multiline = true;
@@ -78,15 +84,20 @@
             // 
             // LabelResult
             // 
+            LabelResult.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             LabelResult.AutoSize = true;
-            LabelResult.Font = new Font("Segoe UI", 20F, FontStyle.Bold, GraphicsUnit.Point);
+            LabelResult.Font = new Font("Segoe UI Semilight", 16.2F, FontStyle.Regular, GraphicsUnit.Point);
             LabelResult.Location = new Point(14, 385);
             LabelResult.Name = "LabelResult";
-            LabelResult.Size = new Size(0, 46);
+            LabelResult.Size = new Size(0, 38);
             LabelResult.TabIndex = 4;
             // 
             // listView1
             // 
+            listView1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
+            listView1.Columns.AddRange(new ColumnHeader[] { column, column1 });
+            listView1.Font = new Font("Segoe UI Semilight", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            listView1.FullRowSelect = true;
             listView1.Location = new Point(13, 58);
             listView1.Margin = new Padding(4);
             listView1.Name = "listView1";
@@ -97,10 +108,21 @@
             listView1.ColumnClick += listView1_ColumnClick;
             listView1.MouseDoubleClick += listView1_MouseDoubleClick;
             // 
+            // column
+            // 
+            column.Text = "Ім'я";
+            column.Width = 200;
+            // 
+            // column1
+            // 
+            column1.Text = "Розмір";
+            column1.Width = 200;
+            // 
             // Form1
             // 
-            AutoScaleDimensions = new SizeF(9F, 20F);
-            AutoScaleMode = AutoScaleMode.Font;
+            AcceptButton = buttonScan;
+            AutoScaleMode = AutoScaleMode.Inherit;
+            BackColor = SystemColors.Control;
             ClientSize = new Size(800, 450);
             Controls.Add(listView1);
             Controls.Add(LabelResult);
@@ -108,9 +130,15 @@
             Controls.Add(textBoxFolder);
             Controls.Add(buttonScan);
             Controls.Add(buttonChoose);
+            Icon = (Icon)resources.GetObject("$this.Icon");
+            Location = new Point(150, 100);
             Name = "Form1";
+            RightToLeft = RightToLeft.No;
+            StartPosition = FormStartPosition.CenterScreen;
             Text = "Directory Scanner";
             Load += Form1_Load;
+            LocationChanged += Form1_LocationChanged;
+            SizeChanged += Form1_SizeChanged;
             ((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
             ResumeLayout(false);
             PerformLayout();
@@ -124,5 +152,7 @@
         private PictureBox pictureBox1;
         private Label LabelResult;
         private ListView listView1;
+        private ColumnHeader column;
+        private ColumnHeader column1;
     }
 }

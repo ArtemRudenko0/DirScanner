@@ -6,12 +6,26 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>DirScanner.exe.manifest</ApplicationManifest>
+    <PackageIcon>folder largeIcon.png</PackageIcon>
+    <ApplicationIcon>img\folde.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
     <Compile Remove="img\**" />
     <EmbeddedResource Remove="img\**" />
     <None Remove="img\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="img\folde.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="img\folder largeIcon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
   <ItemGroup>

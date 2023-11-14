@@ -1,20 +1,24 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\АРТЕМ\\Desktop\\DirScanner\\DirScanner\\DirScanner.csproj": {}
+    "C:\\Users\\fight\\Desktop\\DirScanner\\DirScanner\\DirScanner.csproj": {}
   },
   "projects": {
-    "C:\\Users\\АРТЕМ\\Desktop\\DirScanner\\DirScanner\\DirScanner.csproj": {
+    "C:\\Users\\fight\\Desktop\\DirScanner\\DirScanner\\DirScanner.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\АРТЕМ\\Desktop\\DirScanner\\DirScanner\\DirScanner.csproj",
+        "projectUniqueName": "C:\\Users\\fight\\Desktop\\DirScanner\\DirScanner\\DirScanner.csproj",
         "projectName": "DirScanner",
-        "projectPath": "C:\\Users\\АРТЕМ\\Desktop\\DirScanner\\DirScanner\\DirScanner.csproj",
-        "packagesPath": "C:\\Users\\АРТЕМ\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\АРТЕМ\\Desktop\\DirScanner\\DirScanner\\obj\\",
+        "projectPath": "C:\\Users\\fight\\Desktop\\DirScanner\\DirScanner\\DirScanner.csproj",
+        "packagesPath": "C:\\Users\\fight\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\fight\\Desktop\\DirScanner\\DirScanner\\obj\\",
         "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
         "configFilePaths": [
-          "C:\\Users\\АРТЕМ\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\fight\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -58,7 +62,7 @@
               "privateAssets": "none"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.306\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.403\\RuntimeIdentifierGraph.json"
         }
       }
     }

@@ -10,12 +10,15 @@ namespace DirScanner
 {
     public partial class Form1 : Form
     {
+        ProgressBarForm progressBarForm;
 
         private string DirectoryPath;
         private int occurrenceCounter = 0;
         private ListViewItemComparer listViewItemComparer;
         ImageList imageList;
         private int sortedColumn = -1;
+        private int foldersCount = 0;
+        private Dictionary<string, long> folderSizes = new Dictionary<string, long>();
         public int OccurrenceCounter
         {
             get { return occurrenceCounter; }
@@ -40,93 +43,143 @@ namespace DirScanner
 
             listViewItemComparer = new ListViewItemComparer();
             listView1.ListViewItemSorter = listViewItemComparer;
-           
-            listView1.Columns.Add("Ім'я", 200);
-            listView1.Columns.Add("Розмір", 200);
-
+            LabelResult.Text = "Виберіть папку, яку треба сканувати...";
+            progressBarForm = new ProgressBarForm();
+            buttonScan.Enabled = false;
 
         }
-
         private void LoadFiles(DirectoryInfo dir, int count)
         {
-            
-            
-
             listView1.Items.Clear();
             listView1.ListViewItemSorter = null;
             listViewItemComparer.Order = SortOrder.None;
-            // listViewItemComparer.Order = SortOrder.Ascending;
-            //listView1.Sort();
+
             if (count > 0)
             {
-
                 ListViewItem back = new ListViewItem("...", 0);
                 listView1.Items.Add(back);
             }
+
             string[] subdirectories = Directory.GetDirectories(dir.FullName);
             foreach (string subdirectory in subdirectories)
             {
-                DirectoryInfo subDir = new DirectoryInfo(subdirectory);
-                ListViewItem item = new ListViewItem(subDir.Name, 0);
-                item.SubItems.Add(setMeasurement(CalculateTotalSize(DirectoryPath + "\\" + subDir.Name)));
-                listView1.Items.Add(item);
-            }
-            string[] Files = Directory.GetFiles(dir.FullName, "*.*");
-            if (Files.Length > 0)
-            {
-
-                foreach (string file in Files)
+                if (CanAccessFolder(subdirectory))
                 {
-                    FileInfo fi = new FileInfo(file);
+                    DirectoryInfo subDir = new DirectoryInfo(subdirectory);
+                    ListViewItem item = new ListViewItem(subDir.Name, 0);
+                    long folderSize = CalculateTotalSize(subDir.FullName);
+                    item.SubItems.Add(setMeasurement(folderSize));
 
-                 
-                    ListViewItem item1 = new ListViewItem(fi.Name,1);
-                   
-
-                    //Додавання іконки в масив, якщо такої не має, а потім встановлення до Item
-                    if (!imageList.Images.ContainsKey(fi.Extension))
-                    {
-                        // If not, add the image to the image list.
-                        Icon iconForFile = Icon.ExtractAssociatedIcon(fi.FullName);
-                        imageList.Images.Add(fi.Extension, iconForFile);
-                    }
-                    item1.ImageKey = fi.Extension;
-
-
-                    item1.SubItems.Add(setMeasurement(fi.Length));
-
-                    listView1.Items.Add(item1);
+                    listView1.Items.Add(item);
                 }
             }
 
+            string[] files = Directory.GetFiles(dir.FullName, "*.*");
+            if (files.Length > 0)
+            {
+                foreach (string file in files)
+                {
+                    if (CanAccessFile(file))
+                    {
+                        FileInfo fi = new FileInfo(file);
+                        ListViewItem item1 = new ListViewItem(fi.Name, 1);
+
+                        string key = fi.FullName;
+                        if (!imageList.Images.ContainsKey(key))
+                        {
+                            Icon iconForFile = Icon.ExtractAssociatedIcon(fi.FullName);
+                            iconForFile = RemoveBlackBackground(iconForFile);
+                            imageList.Images.Add(key, iconForFile);
+                        }
+
+                        item1.ImageKey = key;
+                        item1.SubItems.Add(setMeasurement(fi.Length));
+                        listView1.Items.Add(item1);
+                    }
+                }
+            }
         }
 
-        private void buttonScan_Click(object sender, EventArgs e)
+        private async void buttonScan_Click(object sender, EventArgs e)
         {
 
-            if (DirectoryPath != textBoxFolder.Text)
+            buttonScan.Enabled = false;
+            DirectoryPath = textBoxFolder.Text;
+            OccurrenceCounter = 0;
+            DirectoryInfo SubDir = new DirectoryInfo(DirectoryPath);
+            folderSizes.Clear();
+            if (Directory.Exists(DirectoryPath))
             {
-                DirectoryPath = textBoxFolder.Text;
-                OccurrenceCounter = 0;
-                DirectoryInfo SubDir = new DirectoryInfo(DirectoryPath);
-                LoadFiles(SubDir, OccurrenceCounter);
-                if (Directory.Exists(DirectoryPath))
-                {
 
-                    long totalSize = CalculateTotalSize(DirectoryPath);
+                LabelResult.Text = " ";
+                progressBarForm = new ProgressBarForm(foldersCount);
 
-                    LabelResult.Text = "Загальний розмір файлів: " + setMeasurement(totalSize);
-                }
-                else
-                {
-                    LabelResult.Text = "Вказаної папки не існує.";
-                }
+                // Привязываем обработчик события FormClosed
+                // progressBarForm.Left = listView1.Left + this.Left + 13 - 4;
+                //progressBarForm.Top = listView1.Top + this.Top + 58 - 20;
+                progressBarForm.Width = listView1.Width;
+                progressBarForm.Height = listView1.Height;
+                progressBarForm.CenterChildForm(progressBarForm, this, listView1.Location.X, listView1.Location.Y);
+                progressBarForm.Show(this);
+
+                // this.Enabled = false;
+                buttonChoose.Enabled = false;
+                textBoxFolder.Enabled = false;
+                Application.DoEvents(); // Обновление интерфейса
+                foldersCount = CountTotalFolders(DirectoryPath);
+                progressBarForm.TotalFolders = foldersCount;
+
+                // Запускаем асинхронную операцию в отдельном потоке
+                 await Task.Run(() =>
+                 {
+                     long totalSize = CalculateTotalSize(DirectoryPath);
+
+                     // Обновляем интерфейс в основном потоке
+                     Invoke(new Action(() =>
+                     {
+                         LoadFiles(SubDir, OccurrenceCounter);
+                         LabelResult.Text = "Загальний розмір файлів: " + setMeasurement(totalSize) + " в "
+                             + foldersCount.ToString() + " папках";
+
+                         // Закрываем форму прогресса после завершения сканирования
+                         //this.Enabled = true;
+
+
+                         //textBoxFolder.Focus();
+                         textBoxFolder.Select(0, 0);
+
+                         progressBarForm.Close();
+
+                     }));
+                 });
+               // await ScanAndUpdateUIAsync(SubDir);
+                buttonChoose.Enabled = true;
+                textBoxFolder.Enabled = true;
             }
+
         }
+
+        /*private async Task ScanAndUpdateUIAsync(DirectoryInfo SubDir)
+        {
+            long totalSize = await Task.Run(() => CalculateTotalSize(DirectoryPath));
+
+            LoadFiles(SubDir, OccurrenceCounter);
+            LabelResult.Text = "Загальний розмір файлів: " + setMeasurement(totalSize) + " в " + foldersCount.ToString() + " папках";
+
+            textBoxFolder.Select(0, 0);
+
+            progressBarForm.Close();
+        }*/
+
         private long CalculateTotalSize(string folderPath)
         {
 
+            if (folderSizes.ContainsKey(folderPath))
+            {
+                return folderSizes[folderPath];
+            }
             long totalSize = 0;
+            int processedFolders = 0;
 
             string[] files = Directory.GetFiles(folderPath);
 
@@ -154,10 +207,42 @@ namespace DirScanner
 
                     totalSize += CalculateTotalSize(subfolder); // Рекурсивный вызов
                 }
+                processedFolders++;
+                progressBarForm.UpdateProgress();
             }
+            folderSizes[folderPath] = totalSize;
 
             return totalSize;
         }
+        private int CountTotalFolders(string folderPath)
+        {
+            int folderCount = 0;
+            CountFoldersRecursively(folderPath, ref folderCount);
+            return folderCount;
+        }
+        private void CountFoldersRecursively(string folderPath, ref int folderCount)
+        {
+            try
+            {
+                // Попытка получить доступ к папке
+                DirectoryInfo directoryInfo = new DirectoryInfo(folderPath);
+                if (CanAccessFolder(directoryInfo.FullName))
+                {
+                    folderCount++;
+                }
+
+                // Рекурсивный вызов для подпапок
+                foreach (string subfolder in Directory.GetDirectories(folderPath))
+                {
+                    CountFoldersRecursively(subfolder, ref folderCount);
+                }
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Игнорировать ошибку доступа
+            }
+        }
+
         private string setMeasurement(long lenght)
         {
             string newMeasurement = " ";
@@ -192,7 +277,12 @@ namespace DirScanner
             }
             return newMeasurement;
         }
-
+        private Icon RemoveBlackBackground(Icon originalIcon)
+        {
+            Bitmap iconBitmap = originalIcon.ToBitmap();
+            iconBitmap.MakeTransparent(Color.Black); // Удаляем черный фон
+            return Icon.FromHandle(iconBitmap.GetHicon());
+        }
         private bool CanAccessFolder(string folderPath) //Перевірка доступу до папки
         {
             try
@@ -206,12 +296,32 @@ namespace DirScanner
                 return false;
             }
         }
+        private bool CanAccessFile(string filePath)
+        {
+            try
+            {
+                FileInfo fileInfo = new FileInfo(filePath);
+                fileInfo.Refresh(); // Обновляем информацию о файле
+                return true;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Обработка ошибки доступа к файлу
+                return false;
+            }
+        }
         private void buttonChoose_Click(object sender, EventArgs e)
         {
             if (folderBrowserDialog.ShowDialog() == DialogResult.OK)
             {
                 string selectedFolderPath = folderBrowserDialog.SelectedPath;
+
                 textBoxFolder.Text = selectedFolderPath;
+                if (DirectoryPath != textBoxFolder.Text)
+                {
+                    buttonScan.Enabled = true;
+
+                }
             }
         }
 
@@ -219,14 +329,12 @@ namespace DirScanner
         {
             ListViewItem selectedItem = listView1.FocusedItem;
 
-            
+
             if (selectedItem.Name != null)
             {
                 if (selectedItem.Text.ToString() == "...")
                 {
-                    // listView1.ListViewItemSorter = null;
-                    //DirectoryPath = Path.GetDirectoryName(DirectoryPath);
-                    // listViewItemComparer.Order = SortOrder.Descending;
+
                     DirectoryPath = Path.GetDirectoryName(DirectoryPath);
                     OccurrenceCounter--;
                     DirectoryInfo Sub_Di = new DirectoryInfo(DirectoryPath);
@@ -237,14 +345,18 @@ namespace DirScanner
                 else
                 {
                     DirectoryPath += "\\" + selectedItem.Text.ToString();
+
                     // MessageBox.Show(DirectoryPath);
                     if (Directory.Exists(DirectoryPath))
                     {
+
                         OccurrenceCounter++;
                         DirectoryInfo Sub_Di = new DirectoryInfo(DirectoryPath);
+
                         LoadFiles(Sub_Di, OccurrenceCounter);
 
                     }
+                    else { DirectoryPath = Path.GetDirectoryName(DirectoryPath); }
                 }
 
             }
@@ -254,10 +366,10 @@ namespace DirScanner
         private void listView1_ColumnClick(object sender, ColumnClickEventArgs e)
         {
             listView1.ListViewItemSorter = null;
-           
+
             listViewItemComparer.directoryPath = DirectoryPath;
             // Устанавливаем столбец, по которому нужно сортировать
-            
+
             if (e.Column != sortedColumn)
             {
                 sortedColumn = e.Column;
@@ -278,6 +390,21 @@ namespace DirScanner
             listView1.ListViewItemSorter = new ListViewItemComparer(e.Column, listViewItemComparer.Order);
             // Вызываем метод для сортировки
             listView1.Sort();
+        }
+
+        private void Form1_LocationChanged(object sender, EventArgs e)
+        {
+            if (progressBarForm != null)
+            {
+                progressBarForm.CenterChildForm(progressBarForm, this, listView1.Location.X, listView1.Location.Y);
+            }        
+        }
+
+        private void Form1_SizeChanged(object sender, EventArgs e)
+        {
+            progressBarForm.Width = listView1.Width;
+            progressBarForm.Height = listView1.Height;
+            progressBarForm.CenterChildForm(progressBarForm, this, listView1.Location.X, listView1.Location.Y);
         }
     }
 

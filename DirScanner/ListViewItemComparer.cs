@@ -34,11 +34,7 @@ namespace DirScanner
             }
             else
             {
-                //FileInfo fileInfo1 = new FileInfo(((ListViewItem)x).SubItems[0].Text);
-                //FileInfo fileInfo2 = new FileInfo(((ListViewItem)y).SubItems[0].Text);
-
-                //string[] files = Directory.GetDirectories(directoryPath);
-
+               
                 string textX = ((ListViewItem)x).SubItems[columnToSort].Text;
                 string textY = ((ListViewItem)y).SubItems[columnToSort].Text;
                 int compareResult = 0;
