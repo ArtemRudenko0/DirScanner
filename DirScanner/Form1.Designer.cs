@@ -37,13 +37,19 @@
             listView1 = new ListView();
             column = new ColumnHeader();
             column1 = new ColumnHeader();
+            columnPercent = new ColumnHeader();
+            columnEl = new ColumnHeader();
+            columnFolders = new ColumnHeader();
+            columnFiles = new ColumnHeader();
+            columnDate = new ColumnHeader();
+            progressBar2 = new ProgressBar();
             ((System.ComponentModel.ISupportInitialize)pictureBox1).BeginInit();
             SuspendLayout();
             // 
             // buttonChoose
             // 
             buttonChoose.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            buttonChoose.Location = new Point(454, 12);
+            buttonChoose.Location = new Point(934, 12);
             buttonChoose.Name = "buttonChoose";
             buttonChoose.Size = new Size(148, 39);
             buttonChoose.TabIndex = 0;
@@ -54,7 +60,7 @@
             // buttonScan
             // 
             buttonScan.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            buttonScan.Location = new Point(608, 12);
+            buttonScan.Location = new Point(1088, 12);
             buttonScan.Name = "buttonScan";
             buttonScan.Size = new Size(180, 39);
             buttonScan.TabIndex = 1;
@@ -69,8 +75,9 @@
             textBoxFolder.Location = new Point(56, 12);
             textBoxFolder.Multiline = true;
             textBoxFolder.Name = "textBoxFolder";
-            textBoxFolder.Size = new Size(392, 39);
+            textBoxFolder.Size = new Size(872, 39);
             textBoxFolder.TabIndex = 2;
+            textBoxFolder.TextChanged += textBoxFolder_TextChanged;
             // 
             // pictureBox1
             // 
@@ -87,7 +94,7 @@
             LabelResult.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
             LabelResult.AutoSize = true;
             LabelResult.Font = new Font("Segoe UI Semilight", 16.2F, FontStyle.Regular, GraphicsUnit.Point);
-            LabelResult.Location = new Point(14, 385);
+            LabelResult.Location = new Point(14, 567);
             LabelResult.Name = "LabelResult";
             LabelResult.Size = new Size(0, 38);
             LabelResult.TabIndex = 4;
@@ -95,17 +102,18 @@
             // listView1
             // 
             listView1.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
-            listView1.Columns.AddRange(new ColumnHeader[] { column, column1 });
+            listView1.Columns.AddRange(new ColumnHeader[] { column, column1, columnPercent, columnEl, columnFolders, columnFiles, columnDate });
             listView1.Font = new Font("Segoe UI Semilight", 9F, FontStyle.Regular, GraphicsUnit.Point);
             listView1.FullRowSelect = true;
             listView1.Location = new Point(13, 58);
             listView1.Margin = new Padding(4);
             listView1.Name = "listView1";
-            listView1.Size = new Size(773, 323);
+            listView1.Size = new Size(1253, 505);
             listView1.TabIndex = 5;
             listView1.UseCompatibleStateImageBehavior = false;
             listView1.View = View.List;
             listView1.ColumnClick += listView1_ColumnClick;
+            listView1.SizeChanged += listView1_SizeChanged;
             listView1.MouseDoubleClick += listView1_MouseDoubleClick;
             // 
             // column
@@ -118,12 +126,51 @@
             column1.Text = "Розмір";
             column1.Width = 200;
             // 
+            // columnPercent
+            // 
+            columnPercent.Text = "%";
+            columnPercent.Width = 140;
+            // 
+            // columnEl
+            // 
+            columnEl.Text = "Елементи";
+            columnEl.TextAlign = HorizontalAlignment.Center;
+            columnEl.Width = 150;
+            // 
+            // columnFolders
+            // 
+            columnFolders.Text = "Папки";
+            columnFolders.TextAlign = HorizontalAlignment.Center;
+            columnFolders.Width = 150;
+            // 
+            // columnFiles
+            // 
+            columnFiles.Text = "Файли";
+            columnFiles.TextAlign = HorizontalAlignment.Center;
+            columnFiles.Width = 150;
+            // 
+            // columnDate
+            // 
+            columnDate.Text = "Дата створення";
+            columnDate.TextAlign = HorizontalAlignment.Center;
+            columnDate.Width = 225;
+            // 
+            // progressBar2
+            // 
+            progressBar2.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            progressBar2.Location = new Point(1025, 583);
+            progressBar2.Name = "progressBar2";
+            progressBar2.Size = new Size(241, 24);
+            progressBar2.TabIndex = 6;
+            progressBar2.Visible = false;
+            // 
             // Form1
             // 
             AcceptButton = buttonScan;
             AutoScaleMode = AutoScaleMode.Inherit;
             BackColor = SystemColors.Control;
-            ClientSize = new Size(800, 450);
+            ClientSize = new Size(1280, 632);
+            Controls.Add(progressBar2);
             Controls.Add(listView1);
             Controls.Add(LabelResult);
             Controls.Add(pictureBox1);
@@ -154,5 +201,11 @@
         private ListView listView1;
         private ColumnHeader column;
         private ColumnHeader column1;
+        private ColumnHeader columnPercent;
+        private ColumnHeader columnEl;
+        private ColumnHeader columnFolders;
+        private ColumnHeader columnFiles;
+        private ColumnHeader columnDate;
+        private ProgressBar progressBar2;
     }
 }

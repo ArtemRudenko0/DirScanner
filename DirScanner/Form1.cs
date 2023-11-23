@@ -1,9 +1,12 @@
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
@@ -20,7 +23,25 @@ namespace DirScanner
         ImageList imageList;
         private int sortedColumn = -1;
         private int foldersCount = 0;
-        private Dictionary<string, long> folderSizes = new Dictionary<string, long>();
+        class FolderElements
+        {
+            public long folders;
+            public long files;
+            public FolderElements()
+            {
+
+            }
+            public FolderElements(long folders, long files)
+            {
+                this.files = files;
+                this.folders = folders;
+            }
+        }
+        private ConcurrentDictionary<string, long> folderSizes = new ConcurrentDictionary<string, long>();
+        private ConcurrentDictionary<string, FolderElements> folderElements = new ConcurrentDictionary<string, FolderElements>();
+        private List<double> columnWidthRatios = new List<double>();
+
+
         public int OccurrenceCounter
         {
             get { return occurrenceCounter; }
@@ -48,14 +69,16 @@ namespace DirScanner
             LabelResult.Text = "Виберіть папку, яку треба сканувати...";
             progressBarForm = new ProgressBarForm();
             buttonScan.Enabled = false;
-
+            SaveColumnWidthRatios();
         }
-        private void LoadFiles(DirectoryInfo dir, int count)
+        private async void LoadFiles(DirectoryInfo dir, int count)
         {
+
+            progressBar2.Visible = true;
             listView1.Items.Clear();
             listView1.ListViewItemSorter = null;
             listViewItemComparer.Order = SortOrder.None;
-
+            List<Task<int>> tasks = new List<Task<int>>();
             if (count > 0)
             {
                 ListViewItem back = new ListViewItem("...", 0);
@@ -63,9 +86,11 @@ namespace DirScanner
             }
 
             string[] subdirectories = Directory.GetDirectories(dir.FullName);
+            progressBar2.Value = 0;
+            progressBar2.Maximum = subdirectories.Length;
             foreach (string subdirectory in subdirectories)
             {
-                if (CanAccessFolder(subdirectory))
+                if (CanAccessFolder(subdirectory) && !IsSystemFolder(subdirectory))
                 {
                     DirectoryInfo subDir = new DirectoryInfo(subdirectory);
                     ListViewItem item = new ListViewItem(subDir.Name, 0);
@@ -73,47 +98,122 @@ namespace DirScanner
                     long folderSize = folderSizes[subDir.FullName];
                     item.SubItems.Add(setMeasurement(folderSize));
 
+                    if (folderSizes[subDir.FullName] != 0)
+                    {
+
+                        double ratio = (double)folderSizes[subDir.FullName] / folderSizes[subDir.Parent.FullName] * 100;
+                        if (ratio >= 95 || ratio <= 1)
+                        {
+                            item.SubItems.Add(ratio.ToString("0.0000") + " %");
+                        }
+
+                        else item.SubItems.Add(ratio.ToString("0.00") + " %");
+                    }
+                    else item.SubItems.Add("0.00" + " %");
+                    item.SubItems.Add("");
+
+                    item.SubItems.Add("");
+                    item.SubItems.Add("");
+                    item.SubItems.Add(subDir.CreationTime.ToString());
                     listView1.Items.Add(item);
+
+                    //int totalfolders = await CountFoldersRecursivelyAsync(subdirectory);
+                    // item.SubItems[4].Text = (totalfolders.ToString());
+
+
+
+
                 }
             }
 
             string[] files = Directory.GetFiles(dir.FullName, "*.*");
+
             if (files.Length > 0)
             {
                 foreach (string file in files)
                 {
-                    if (CanAccessFile(file))
+                    if (CanAccessFile(file) && !IsSystemFile(file))
                     {
+
                         FileInfo fi = new FileInfo(file);
                         ListViewItem item1 = new ListViewItem(fi.Name, 1);
 
+
                         string key = fi.FullName;
+                        Icon iconForFile = null;
+                        Icon tempIcon = null;
                         if (!imageList.Images.ContainsKey(key))
                         {
-                            Icon iconForFile = Icon.ExtractAssociatedIcon(fi.FullName);
-                            iconForFile = RemoveBlackBackground(iconForFile);
-                            imageList.Images.Add(key, iconForFile);
+                            iconForFile = Icon.ExtractAssociatedIcon(file);
+                            tempIcon = iconForFile;
+
+                            tempIcon = RemoveBlackBackground(tempIcon);
+                            try
+                            {
+                                if (tempIcon != null)
+                                {
+                                    imageList.Images.Add(key, tempIcon);
+                                    item1.ImageKey = key;
+                                }
+
+
+                            }
+                            catch (Exception)
+                            {
+
+
+
+                            }
+                            
+
                         }
 
-                        item1.ImageKey = key;
+                        
                         item1.SubItems.Add(setMeasurement(fi.Length));
+
+                        // DirectoryInfo subDir = new DirectoryInfo(Path.GetDirectoryName(fi.Directory.FullName));
+
+                        // string directoryName = subDir.FullName;
+                        if (folderSizes.ContainsKey(fi.Directory.FullName))
+                        {
+                            double ratio = (double)fi.Length / folderSizes[fi.Directory.FullName] * 100;
+                            if (ratio >= 95 || ratio <= 1)
+                            {
+                                item1.SubItems.Add(ratio.ToString("0.0000") + " %");
+                            }
+                            else item1.SubItems.Add(ratio.ToString("0.00") + " %");
+                        }
+                        else
+                        {
+
+                        }
+
+                        // item1.SubItems.Add((fi.Length /  folderSizes[Path.GetDirectoryName(fi)] * 100).ToString());
+                        item1.SubItems.Add("");
+
+                        item1.SubItems.Add("");
+                        item1.SubItems.Add("");
+                        item1.SubItems.Add(fi.CreationTime.ToString());
                         listView1.Items.Add(item1);
                     }
                 }
             }
+
+            await UpdateFolderCountsAsync();
+            progressBar2.Visible = false;
         }
 
         private async void buttonScan_Click(object sender, EventArgs e)
         {
 
-            buttonScan.Enabled = false;
+
             DirectoryPath = textBoxFolder.Text;
             OccurrenceCounter = 0;
             DirectoryInfo SubDir = new DirectoryInfo(DirectoryPath);
             folderSizes.Clear();
             if (Directory.Exists(DirectoryPath))
             {
-
+                buttonScan.Enabled = false;
                 LabelResult.Text = " ";
                 progressBarForm = new ProgressBarForm(foldersCount);
 
@@ -126,13 +226,13 @@ namespace DirScanner
                 buttonChoose.Enabled = false;
                 textBoxFolder.Enabled = false;
                 Application.DoEvents(); // Обновление интерфейса
-               
-                await Task.Run(() =>
-                {
-                    foldersCount = CountTotalFolders(DirectoryPath);
-                    progressBarForm.TotalFolders = foldersCount;
-                    long totalSize = CalculateTotalSize(DirectoryPath);
 
+                await Task.Run(async () =>
+                {
+                    foldersCount = await CountTotalFoldersAsync(DirectoryPath);
+                    progressBarForm.TotalFolders = foldersCount;
+                    long totalSize = await CalculateTotalSizeAsync(DirectoryPath);
+                    folderSizes.TryAdd(DirectoryPath, totalSize);
                     // Обновляем интерфейс в основном потоке
                     Invoke(new Action(() =>
                     {
@@ -141,7 +241,7 @@ namespace DirScanner
                             + foldersCount.ToString() + " папках";
 
                         textBoxFolder.Select(0, 0);
-                        
+
 
                         progressBarForm.Close();
 
@@ -154,6 +254,7 @@ namespace DirScanner
                 buttonChoose.Enabled = true;
                 textBoxFolder.Enabled = true;
             }
+
 
         }
 
@@ -188,76 +289,236 @@ namespace DirScanner
 
             notifyIcon.Dispose(); // Освобождение ресурсов
         }
-
-        private long CalculateTotalSize(string folderPath)
+        private async Task<long> CalculateTotalSizeAsync(string folderPath)
         {
-
-            if (folderSizes.ContainsKey(folderPath))
+            if (folderSizes.TryGetValue(folderPath, out long size))
             {
-                return folderSizes[folderPath];
+                return size;
             }
+
             long totalSize = 0;
             int processedFolders = 0;
 
-            string[] files = Directory.GetFiles(folderPath);
+
+            string[] files;
+
+            try
+            {
+                files = Directory.GetFiles(folderPath);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Обработка ошибки доступа к файлам
+                files = new string[0]; // Пустой массив файлов
+            }
 
             foreach (string file in files)
             {
-                FileInfo fileInfo = new FileInfo(file);
-                totalSize += fileInfo.Length;
+                try
+                {
+                    if (CanAccessFile(file) && !IsSystemFile(file))
+                    {
+                        FileInfo fileInfo = new FileInfo(file);
+                        totalSize += fileInfo.Length;
 
+                        folderSizes.TryAdd(fileInfo.Name, file.Length);
+
+                    }
+                }
+                catch (UnauthorizedAccessException)
+                {
+
+                }
             }
+
             string[] subfolders;
             try
             {
                 subfolders = Directory.GetDirectories(folderPath);
+
             }
             catch (UnauthorizedAccessException)
             {
                 // Обработка ошибки доступа к папке
                 return 0;
             }
+            //progressBarForm.TotalFolders = progressBarForm.TotalFolders + subfolders.Length;
+            List<Task<long>> tasks = new List<Task<long>>();
+            //FolderElements elements = new FolderElements();
+            //List<Task<FolderElements>> folderElementsTasks = new List<Task<FolderElements>>();
             foreach (string subfolder in subfolders)
             {
                 DirectoryInfo directoryInfo = new DirectoryInfo(subfolder);
                 if (CanAccessFolder(directoryInfo.FullName))
                 {
 
-                    totalSize += CalculateTotalSize(subfolder); // Рекурсивный вызов
+                    tasks.Add(Task.Run(() => CalculateTotalSizeAsync(subfolder)));
+                    // folderElementsTasks.Add(CountFolderElementsAsync(subfolder));
                 }
                 processedFolders++;
                 progressBarForm.UpdateProgress();
-            }
-            folderSizes[folderPath] = totalSize;
 
+            }
+
+            //folderSizes[folderPath] = totalSize;
+            await Task.WhenAll(tasks);
+            // await Task.WhenAll(folderElementsTasks);
+            foreach (var task in tasks)
+            {
+                totalSize += await task;
+            }
+            /*foreach(var task in folderElementsTasks)
+            {
+                elements = await task;
+            }*/
+            // folderElements.TryAdd(folderPath, elements);
+            folderSizes.TryAdd(folderPath, totalSize);
+
+            //processedFolders++;
+            //progressBarForm.UpdateProgress();
             return totalSize;
         }
-        private int CountTotalFolders(string folderPath)
+        private async Task<int> CountTotalFoldersAsync(string folderPath)
+        {
+            return await CountFoldersRecursivelyAsync(folderPath);
+        }
+        private async Task<int> CountFoldersRecursivelyAsync(string folderPath)
         {
             int folderCount = 0;
-            CountFoldersRecursively(folderPath, ref folderCount);
-            return folderCount;
-        }
-        private void CountFoldersRecursively(string folderPath, ref int folderCount)
-        {
-            if (CanAccessFolder(folderPath))
-            {
-                folderCount++;
 
-                try
+
+            string[] subfolders;
+            try
+            {
+                subfolders = Directory.GetDirectories(folderPath);
+                folderCount = subfolders.Length;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return 0;
+            }
+            List<Task<int>> tasks = new List<Task<int>>();
+
+            foreach (string subfolder in subfolders)
+            {
+                DirectoryInfo directoryInfo = new DirectoryInfo(subfolder);
+                if (CanAccessFolder(directoryInfo.FullName))
                 {
-                    foreach (string subfolder in Directory.GetDirectories(folderPath))
-                    {
-                        CountFoldersRecursively(subfolder, ref folderCount);
-                    }
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    // Обработка ошибки доступа к папке
+                    tasks.Add(Task.Run(() => (CountFoldersRecursivelyAsync(subfolder))));
                 }
             }
-        }
 
+            await Task.WhenAll(tasks);
+
+            foreach (var task in tasks)
+            {
+                folderCount += await task;
+            }
+
+
+            return folderCount;
+        }
+        private async Task<int> CountFilesRecursivelyAsync(string folderPath)
+        {
+            int filesCount = 0;
+
+            string[] subfolders;
+            string[] files;
+            try
+            {
+                subfolders = Directory.GetDirectories(folderPath);
+                files = Directory.GetFiles(folderPath, "*.*");
+                filesCount = files.Length;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return 0;
+            }
+            List<Task<int>> tasks = new List<Task<int>>();
+
+            foreach (string subfolder in subfolders)
+            {
+                DirectoryInfo directoryInfo = new DirectoryInfo(subfolder);
+
+                if (CanAccessFolder(directoryInfo.FullName))
+                {
+                    tasks.Add(Task.Run(() => (CountFilesRecursivelyAsync(subfolder))));
+                }
+            }
+
+            await Task.WhenAll(tasks);
+
+            foreach (var task in tasks)
+            {
+                filesCount += await task;
+            }
+
+
+            return filesCount;
+        }
+        private async Task<FolderElements> CountFolderElementsAsync(string folderPath)
+        {
+            FolderElements element = new FolderElements();
+            element.folders = await CountTotalFoldersAsync(folderPath);
+            element.files = await CountFilesRecursivelyAsync(folderPath);
+            return element;
+        }
+        private async Task UpdateFolderCountsAsync()
+        {
+            long totalFolders = 0, totalFiles = 0, totalElements = 0;
+            progressBar2.Maximum = listView1.Items.Count;
+            foreach (ListViewItem item in listView1.Items)
+            {
+
+                if (item.Text == "...") { }
+                else
+                {
+                    string folderPath = Path.Combine(DirectoryPath, item.Text);
+                    if (Directory.Exists(folderPath))
+                    {
+                        if (folderElements.TryGetValue(folderPath, out FolderElements fel))
+                        {
+                            totalFolders = fel.folders;
+                            totalFiles = fel.files;
+                            totalElements = fel.files + fel.folders;
+                        }
+                        else
+                        {
+                            totalFolders = await CountFoldersRecursivelyAsync(folderPath);
+                            totalFiles = await CountFilesRecursivelyAsync(folderPath);
+                            totalElements = totalFiles + totalFolders;
+                            if (totalFolders >= 10000 || totalFiles >= 10000)
+                            {
+                                FolderElements element = new FolderElements(totalFolders, totalFiles);
+                                folderElements.TryAdd(folderPath, element);
+                            }
+
+                        }
+                        // Найденная папка
+                        ListViewItem foundItem = null;
+                        foreach (ListViewItem listViewItem in listView1.Items)
+                        {
+                            if (listViewItem.Text == item.Text)
+                            {
+                                foundItem = listViewItem;
+                                break;
+                            }
+                        }
+
+                        if (foundItem != null)
+                        {
+
+                            // Обновление соответствующего столбца в элементе ListViewItem
+                            foundItem.SubItems[3].Text = totalElements.ToString();
+                            foundItem.SubItems[4].Text = totalFolders.ToString();
+                            foundItem.SubItems[5].Text = totalFiles.ToString();
+                        }
+                    }
+                }
+                progressBar2.Value++;
+            }
+
+        }
         private string setMeasurement(long lenght)
         {
             string newMeasurement = " ";
@@ -292,12 +553,39 @@ namespace DirScanner
             }
             return newMeasurement;
         }
+
         private Icon RemoveBlackBackground(Icon originalIcon)
         {
-            Bitmap iconBitmap = originalIcon.ToBitmap();
-            iconBitmap.MakeTransparent(Color.Black); // Удаляем черный фон
-            return Icon.FromHandle(iconBitmap.GetHicon());
+
+
+            try
+            {
+
+                Bitmap bitmap = new Bitmap(originalIcon.ToBitmap());
+
+
+                Bitmap transparentBitmap = new Bitmap(bitmap.Width, bitmap.Height);
+
+                transparentBitmap.MakeTransparent(Color.Black);
+                Graphics g = Graphics.FromImage(transparentBitmap);
+                g.DrawImage(bitmap, Point.Empty);
+
+                Icon transparentIcon = Icon.FromHandle(transparentBitmap.GetHicon());
+
+
+                g.Dispose();
+                bitmap.Dispose();
+                transparentBitmap.Dispose();
+
+                return transparentIcon;
+            }
+            catch (Exception)
+            {
+                // Если произошла ошибка, вернуть исходную иконку
+                return originalIcon;
+            }
         }
+
         private bool CanAccessFolder(string folderPath) //Перевірка доступу до папки
         {
             try
@@ -311,6 +599,8 @@ namespace DirScanner
                 return false;
             }
         }
+
+
         private bool CanAccessFile(string filePath)
         {
             if (File.Exists(filePath))
@@ -328,6 +618,31 @@ namespace DirScanner
                 }
             }
             else return false;
+        }
+        private bool IsSystemFolder(string path)
+        {
+            try
+            {
+                DirectoryInfo directoryInfo = new DirectoryInfo(path);
+                return (directoryInfo.Attributes & FileAttributes.System) != 0;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false; // Обработка ошибки доступа к папке
+            }
+        }
+        private bool IsSystemFile(string path)
+        {
+            try
+            {
+                FileInfo fileInfo = new FileInfo(path);
+                return (fileInfo.Attributes & FileAttributes.System) != 0;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Обработка ошибки доступа к файлу
+                return false;
+            }
         }
         private void buttonChoose_Click(object sender, EventArgs e)
         {
@@ -416,7 +731,7 @@ namespace DirScanner
             if (progressBarForm != null)
             {
                 progressBarForm.CenterChildForm(progressBarForm, this, listView1.Location.X, listView1.Location.Y);
-            }        
+            }
         }
 
         private void Form1_SizeChanged(object sender, EventArgs e)
@@ -425,6 +740,44 @@ namespace DirScanner
             progressBarForm.Height = listView1.Height;
             progressBarForm.CenterChildForm(progressBarForm, this, listView1.Location.X, listView1.Location.Y);
         }
+
+        private void textBoxFolder_TextChanged(object sender, EventArgs e)
+        {
+            buttonScan.Enabled = true;
+        }
+        private void SaveColumnWidthRatios() //Збереження довжини колонок
+        {
+            int totalColumnWidth = 0;
+            foreach (ColumnHeader column in listView1.Columns)
+            {
+                totalColumnWidth += column.Width;
+            }
+
+            columnWidthRatios.Clear();
+            for (int i = 0; i < listView1.Columns.Count; i++)
+            {
+                double ratio = (double)listView1.Columns[i].Width / totalColumnWidth;
+                columnWidthRatios.Add(ratio);
+            }
+        }
+        private void listView1_SizeChanged(object sender, EventArgs e) //Зміна розміру колонок
+        {
+            if (listView1.Columns.Count == columnWidthRatios.Count)
+            {
+                int totalWidth = listView1.ClientSize.Width;
+                for (int i = 0; i < listView1.Columns.Count - 1; i++)
+                {
+                    int newColumnWidth = (int)(totalWidth * columnWidthRatios[i]);
+                    listView1.Columns[i].Width = newColumnWidth;
+                }
+            }
+            else
+            {
+
+            }
+        }
+
+
     }
 
 }

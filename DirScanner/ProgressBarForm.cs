@@ -10,7 +10,7 @@ using System.Windows.Forms;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace DirScanner
-{
+{   
     public partial class ProgressBarForm : Form
     {
         private int totalFolders;

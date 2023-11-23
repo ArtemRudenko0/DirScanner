@@ -37,17 +37,64 @@ namespace DirScanner
                
                 string textX = ((ListViewItem)x).SubItems[columnToSort].Text;
                 string textY = ((ListViewItem)y).SubItems[columnToSort].Text;
-                int compareResult = 0;
-                long numFirst, numSecond;
 
-                if (columnToSort == 0)
-                {   
-                    compareResult = string.Compare(((ListViewItem)x).SubItems[columnToSort].Text,
+                int compareResult = 0;
+
+                long numFirst = 0, numSecond = 0;
+                long.TryParse(textX, out numFirst);
+                long.TryParse(textY, out numSecond);
+             
+
+                switch (columnToSort)
+                {
+                    case 0:
+                        compareResult = string.Compare(((ListViewItem)x).SubItems[columnToSort].Text,
                         ((ListViewItem)y).SubItems[columnToSort].Text);
-                    if (compareResult == 1)
-                       compareResult = -1;
-                    else if (compareResult == 0) { }
-                    else compareResult = 1;
+                        if (compareResult == 1)
+                            compareResult = -1;
+                        else if (compareResult == 0) { }
+                        else compareResult = 1;
+                        break;
+                    case 1:
+                    case 2:
+                        textX = ((ListViewItem)x).SubItems[1].Text;
+                        textY = ((ListViewItem)y).SubItems[1].Text;
+                        numFirst = GetMeasurement(textX);
+                        numSecond = GetMeasurement(textY);
+                        if (numFirst < numSecond)
+                            compareResult = -1;
+                        else if (numFirst > numSecond)
+                            compareResult = 1;
+                        else
+                            compareResult = 0;
+                        break;
+                    case 3:
+                    case 4:
+                    case 5:
+                         
+                        if (numFirst < numSecond)
+                            compareResult = -1;
+                        else if (numFirst > numSecond)
+                            compareResult = 1;
+                        else
+                            compareResult = 0;
+                        break;
+                    case 6:
+                        compareResult = DateTime.Compare(DateTime.Parse(((ListViewItem)x).SubItems[columnToSort].Text),
+                        DateTime.Parse(((ListViewItem)y).SubItems[columnToSort].Text));
+                        if (compareResult == 1)
+                            compareResult = -1;
+                        else if (compareResult == 0) { }
+                        else compareResult = 1;
+                        break;
+                    default:
+                        break;
+
+
+                }
+               /* if (columnToSort == 0)
+                {   
+                    
                 }
                 else
                 {
@@ -60,7 +107,7 @@ namespace DirScanner
                         compareResult = 1;
                     else
                         compareResult = 0;
-                }
+                }*/
 
                 // Сравниваем элементы по выбранному столбцу
 
@@ -100,6 +147,7 @@ namespace DirScanner
 
 
         }
+      
         public int SortColumn
         {
             get { return columnToSort; }
