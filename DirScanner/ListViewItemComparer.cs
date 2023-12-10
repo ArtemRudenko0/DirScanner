@@ -14,8 +14,8 @@ namespace DirScanner
         public string directoryPath;
         public ListViewItemComparer()
         {
-            columnToSort = 0; // По умолчанию сортируем по первому столбцу
-            orderOfSort = SortOrder.Ascending; // По умолчанию сортируем по возрастанию
+            columnToSort = 0; 
+            orderOfSort = SortOrder.Ascending; 
         }
 
         public ListViewItemComparer(int column, SortOrder order)
@@ -92,27 +92,9 @@ namespace DirScanner
 
 
                 }
-               /* if (columnToSort == 0)
-                {   
-                    
-                }
-                else
-                {
+            
 
-                    numFirst = GetMeasurement(textX);
-                    numSecond = GetMeasurement(textY);
-                    if (numFirst < numSecond)
-                        compareResult = -1;
-                    else if (numFirst > numSecond)
-                        compareResult = 1;
-                    else
-                        compareResult = 0;
-                }*/
-
-                // Сравниваем элементы по выбранному столбцу
-
-
-                // В зависимости от порядка сортировки, меняем знак результата
+              
                 if (orderOfSort == SortOrder.Ascending)
                 {
                     return compareResult;
@@ -133,15 +115,15 @@ namespace DirScanner
             string valuePart = number.Substring(0, number.Length - 3);
             if (format == " Kb")
             {
-                return (long)Convert.ToDouble(valuePart) * 1024; // Килобайты в байты
+                return (long)Convert.ToDouble(valuePart) * 1024; 
             }
             else if (format == " Mb")
             {
-                return (long)Convert.ToDouble(valuePart) * 1024 * 1024; // Мегабайты в байты
+                return (long)Convert.ToDouble(valuePart) * 1024 * 1024; 
             }
             else if (format == " Gb")
             {
-                return (long)Convert.ToDouble(valuePart) * 1024 * 1024 * 1024; // Гигабайты в байты
+                return (long)Convert.ToDouble(valuePart) * 1024 * 1024 * 1024; 
             }
             return 0;
 

@@ -98,7 +98,7 @@ namespace DirScanner
                     long folderSize = folderSizes[subDir.FullName];
                     item.SubItems.Add(setMeasurement(folderSize));
 
-                    if (folderSizes[subDir.FullName] != 0)
+                   if (folderSizes[subDir.FullName] != 0)
                     {
 
                         double ratio = (double)folderSizes[subDir.FullName] / folderSizes[subDir.Parent.FullName] * 100;
@@ -117,8 +117,6 @@ namespace DirScanner
                     item.SubItems.Add(subDir.CreationTime.ToString());
                     listView1.Items.Add(item);
 
-                    //int totalfolders = await CountFoldersRecursivelyAsync(subdirectory);
-                    // item.SubItems[4].Text = (totalfolders.ToString());
 
 
 
@@ -174,7 +172,7 @@ namespace DirScanner
                         // DirectoryInfo subDir = new DirectoryInfo(Path.GetDirectoryName(fi.Directory.FullName));
 
                         // string directoryName = subDir.FullName;
-                        if (folderSizes.ContainsKey(fi.Directory.FullName))
+                       if (folderSizes.ContainsKey(fi.Directory.FullName))
                         {
                             double ratio = (double)fi.Length / folderSizes[fi.Directory.FullName] * 100;
                             if (ratio >= 95 || ratio <= 1)
@@ -342,10 +340,7 @@ namespace DirScanner
                 // Обработка ошибки доступа к папке
                 return 0;
             }
-            //progressBarForm.TotalFolders = progressBarForm.TotalFolders + subfolders.Length;
             List<Task<long>> tasks = new List<Task<long>>();
-            //FolderElements elements = new FolderElements();
-            //List<Task<FolderElements>> folderElementsTasks = new List<Task<FolderElements>>();
             foreach (string subfolder in subfolders)
             {
                 DirectoryInfo directoryInfo = new DirectoryInfo(subfolder);
@@ -353,7 +348,7 @@ namespace DirScanner
                 {
 
                     tasks.Add(Task.Run(() => CalculateTotalSizeAsync(subfolder)));
-                    // folderElementsTasks.Add(CountFolderElementsAsync(subfolder));
+                
                 }
                 processedFolders++;
                 progressBarForm.UpdateProgress();
@@ -367,15 +362,8 @@ namespace DirScanner
             {
                 totalSize += await task;
             }
-            /*foreach(var task in folderElementsTasks)
-            {
-                elements = await task;
-            }*/
-            // folderElements.TryAdd(folderPath, elements);
+          
             folderSizes.TryAdd(folderPath, totalSize);
-
-            //processedFolders++;
-            //progressBarForm.UpdateProgress();
             return totalSize;
         }
         private async Task<int> CountTotalFoldersAsync(string folderPath)
@@ -456,13 +444,7 @@ namespace DirScanner
 
             return filesCount;
         }
-        private async Task<FolderElements> CountFolderElementsAsync(string folderPath)
-        {
-            FolderElements element = new FolderElements();
-            element.folders = await CountTotalFoldersAsync(folderPath);
-            element.files = await CountFilesRecursivelyAsync(folderPath);
-            return element;
-        }
+     
         private async Task UpdateFolderCountsAsync()
         {
             long totalFolders = 0, totalFiles = 0, totalElements = 0;
@@ -472,7 +454,7 @@ namespace DirScanner
 
                 if (item.Text == "...") { }
                 else
-                {
+                { 
                     string folderPath = Path.Combine(DirectoryPath, item.Text);
                     if (Directory.Exists(folderPath))
                     {
@@ -674,13 +656,13 @@ namespace DirScanner
                     DirectoryInfo Sub_Di = new DirectoryInfo(DirectoryPath);
 
                     LoadFiles(Sub_Di, OccurrenceCounter);
-                    //listView1.Sort();
+                 
                 }
                 else
                 {
                     DirectoryPath += "\\" + selectedItem.Text.ToString();
 
-                    // MessageBox.Show(DirectoryPath);
+                  
                     if (Directory.Exists(DirectoryPath))
                     {
 
